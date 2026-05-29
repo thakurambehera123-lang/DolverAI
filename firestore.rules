@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: Checks if the user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: Checks if ID conforms to standard safe formats (length, characters)
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper: Validates a full User entity
+    function isValidUser(data) {
+      return data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (data.name == null || (data.name is string && data.name.size() <= 128))
+        && (data.avatar == null || (data.avatar is string && data.avatar.size() <= 1024))
+        && data.subscriptionPlan is string && (data.subscriptionPlan == 'Free' || data.subscriptionPlan == 'Pro IV' || data.subscriptionPlan == 'Pro V')
+        && data.academicUsageCount is int && data.academicUsageCount >= 0
+        && data.nonAcademicUsageCount is int && data.nonAcademicUsageCount >= 0;
+    }
+
+    // Match rules for Users
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data);
+      
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data) && (
+        // Allow the user to update their own plan (demo pricing page toggle), profile, or details
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'avatar', 'subscriptionPlan', 'academicUsageCount', 'nonAcademicUsageCount', 'lastUsageReset'])
+      );
+      
+      allow delete: if false; // Users cannot be deleted directly from client
+
+      // Chats Sub-collection
+      match /chats/{chatId} {
+        allow get, delete: if isSignedIn() && request.auth.uid == userId && isValidId(chatId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(chatId)
+          && request.resource.data.id == chatId
+          && request.resource.data.mode is string && (request.resource.data.mode == 'academic' || request.resource.data.mode == 'non-academic')
+          && request.resource.data.title is string && request.resource.data.title.size() <= 256;
+          
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(chatId)
+          && request.resource.data.title is string && request.resource.data.title.size() <= 256
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'updatedAt']);
+
+        // Messages inside a Chat session
+        match /messages/{messageId} {
+          allow read: if isSignedIn() && request.auth.uid == userId;
+          
+          allow create: if isSignedIn() && request.auth.uid == userId && isValidId(messageId)
+            && request.resource.data.id == messageId
+            && request.resource.data.role is string && (request.resource.data.role == 'user' || request.resource.data.role == 'assistant')
+            && request.resource.data.content is string && request.resource.data.content.size() <= 50000;
+            
+          allow update, delete: if false; // Messages are immutable in our SaaS platform chat
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile, subscription plan, and usage rates",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "subscriptionPlan": {
+          "type": "string",
+          "enum": ["Free", "Pro IV", "Pro V"],
+          "description": "Current subscription tier"
+        },
+        "academicUsageCount": {
+          "type": "integer",
+          "description": "Academic doubt usages in current 4-hour window"
+        },
+        "nonAcademicUsageCount": {
+          "type": "integer",
+          "description": "General assistant usages in current 4-hour window"
+        },
+        "lastUsageReset": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last usage reset"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile creation timestamp"
+        }
+      },
+      "required": ["uid", "email", "subscriptionPlan", "academicUsageCount", "nonAcademicUsageCount", "lastUsageReset", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A chat conversation session, either academic or non-academic",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique chat ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or summary of the chat"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["academic", "non-academic"],
+          "description": "The category or mode of chat"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last activity timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "title", "mode", "updatedAt", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual message within a chat session",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message ID"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant"],
+          "description": "Sender role"
+        },
+        "content": {
+          "type": "string",
+          "description": "Text content of the message"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Sent timestamp"
+        }
+      },
+      "required": ["id", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Profile, subscription levels, and limit timers for each user"
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Stored chat sessions list for a specific user"
+    },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Historical message logs inside a chat session"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 6 L90 28 V72 L50 94 V6 Z' fill='%231E3A8A' /%3E%3Cpath d='M50 6 L10 28 V72 L50 94 V6 Z' fill='%230EA5E9' /%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M34 26 C30 26 30 30 30 30 V70 C30 70 34 74 34 74 H48 C61 74 72 63 72 50 C72 37 61 26 48 26 H34ZM41.5 35.5 V64.5 H48 C56 64.5 62.5 58 62.5 50 C62.5 42 56 35.5 48 35.5 H41.5Z' fill='white' /%3E%3C/svg%3E" />
+    <title>Dolver AI</title>
+    <script>
+      (function() {
+        const saved = localStorage.getItem("dolver_theme");
+        if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,6 @@
+{
+  "name": "Dolver AI",
+  "description": "Your Intelligent AI Assistant for academic breakdowns and general chat streaming.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
