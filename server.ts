@@ -58,6 +58,7 @@ User message: "${firstMessage}"`,
 
   // API Route: Stream completions using Gemini API
  app.post("/api/gemini/chat", async (req, res) => {
+  console.log("CHAT HIT");
   const { messages, systemInstruction, model } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
