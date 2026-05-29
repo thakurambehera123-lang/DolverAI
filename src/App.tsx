@@ -66,6 +66,7 @@ function MainAppLayout() {
 }
 
 export default function App() {
+  console.log("APP RENDERED", window.location.pathname);
   return (
     <ThemeProvider>
       <RouterProvider>
