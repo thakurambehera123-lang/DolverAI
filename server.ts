@@ -57,83 +57,78 @@ User message: "${firstMessage}"`,
   });
 
   // API Route: Stream completions using Gemini API
-  app.post("/api/gemini/chat", async (req, res) => {
-    const { messages, systemInstruction, model } = req.body;
+ app.post("/api/gemini/chat", async (req, res) => {
+  const { messages, systemInstruction, model } = req.body;
 
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "messages array is required" });
-    }
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: "messages array is required" });
+  }
 
-    try {
-      // Set response headers to enable Server-Sent Events (SSE) streaming
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+  try {
+    // SSE headers (stream start)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
-      // Format messages into Google GenAI format (user and model) including multi-modal attachments
-      const formattedContents = messages.map((m: { role: string; content: string; attachments?: { name: string; type: string; size: number; url: string }[] }) => {
-        const parts: any[] = [];
-        
-        // Add content text part
-        parts.push({ text: m.content || "" });
+    // format messages
+    const formattedContents = messages.map((m: any) => {
+      const parts: any[] = [];
 
-        // Add companion attachment parts if they exist
-        if (m.attachments && Array.isArray(m.attachments)) {
-          for (const att of m.attachments) {
-            if (att.url && att.url.startsWith("data:")) {
-              const commaIdx = att.url.indexOf(",");
-              if (commaIdx !== -1) {
-                const mimeType = att.type || "application/octet-stream";
-                const base64Data = att.url.slice(commaIdx + 1);
-                parts.push({
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                  }
-                });
-              }
-            }
+      parts.push({ text: m.content || "" });
+
+      if (m.attachments && Array.isArray(m.attachments)) {
+        for (const att of m.attachments) {
+          if (att.url?.startsWith("data:")) {
+            const base64 = att.url.split(",")[1];
+            parts.push({
+              inlineData: {
+                mimeType: att.type || "application/octet-stream",
+                data: base64,
+              },
+            });
           }
         }
-
-        return {
-          role: m.role === "assistant" ? "model" : "user",
-          parts: parts,
-        };
-      });
-
-      // Set model name. Standard text tasks use gemini-3.5-flash
-      const selectedModel = model || "gemini-3.5-flash";
-
-      // Call streaming API
-      const stream = await ai.models.generateContentStream({
-        model: selectedModel,
-        contents: formattedContents,
-        config: {
-          systemInstruction: systemInstruction || "You are a helpful assistant.",
-        },
-      });
-
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          // Send formatted chunk in line-delimited JSON format
-          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
-        }
       }
 
-      res.write("data: [DONE]\n\n");
-      res.end();
-    } catch (error: any) {
-      console.error("Gemini API Error in backend:", error);
-      // In case stream fails after connection is open
-      if (!res.headersSent) {
-        res.status(500).json({ error: error.message || "Internal server error during generating AI response." });
-      } else {
-        res.write(`data: ${JSON.stringify({ error: error.message || "An unexpected error occurred during streaming." })}\n\n`);
-        res.end();
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts,
+      };
+    });
+
+    const selectedModel = model || "gemini-1.5-flash";
+
+    const stream = await ai.models.generateContentStream({
+      model: selectedModel,
+      contents: formattedContents,
+      config: {
+        systemInstruction: systemInstruction || "You are a helpful assistant.",
+      },
+    });
+
+    // STREAM OUTPUT (FIXED FORMAT FOR FRONTEND)
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        res.write(`data: ${chunk.text}\n\n`);
       }
     }
-  });
+
+    res.write("data: [DONE]\n\n");
+    res.end();
+
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: error.message || "Internal server error",
+      });
+    } else {
+      res.write(`data: ERROR\n\n`);
+      res.end();
+    }
+  }
+});
 
   // Vite Integration for Hot Middleware or Production static serving
   if (process.env.NODE_ENV !== "production") {
